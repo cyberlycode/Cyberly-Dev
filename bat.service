@@ -1,0 +1,13 @@
+[Unit]
+Description=Persist the battery charging threshold after {{.Event}}
+After={{.Event}}.target
+StartLimitBurst=0
+
+[Service]
+Type=oneshot
+ExecStart={{.Shell}} -c 'echo {{.Threshold}} > {{.Path}}'
+Restart=on-failure
+RemainAfterExit=true
+
+[Install]
+WantedBy={{.Event}}.target
