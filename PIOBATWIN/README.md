@@ -1,4 +1,4 @@
-PIO BAT v1.0 (Windows CLI)
+PIOBAT v1.0 (Windows CLI)
 Battery Detection & Management Tool for Windows
 ============================
 [ OVERVIEW ]
@@ -13,12 +13,12 @@ manajemen charging threshold baterai laptop pada Windows 10 & 11.
 * Suite       : PIO Automation & Optimization Suite
 
 [ COMMANDS / CARA PENGGUNAAN ]
-* piobat.bat all         : Menampilkan seluruh inspeksi & diagnostik baterai
-* piobat.bat info        : Menampilkan rincian hardware & kapasitas baterai
-* piobat.bat health      : Menampilkan persentase kesehatan sel baterai (mWh / Design)
-* piobat.bat status      : Menampilkan status daya saat ini
-* piobat.bat capacity    : Menampilkan persentase daya baterai saat ini
-* piobat.bat threshold 80: Mengatur charging threshold pengisian (misal: 80%)
+* piobat.ps1 all         : Menampilkan seluruh inspeksi & diagnostik baterai
+* piobat.ps1 info        : Menampilkan rincian hardware & kapasitas baterai
+* piobat.ps1 health      : Menampilkan persentase kesehatan sel baterai (mWh / Design)
+* piobat.ps1 status      : Menampilkan status daya saat ini
+* piobat.ps1 capacity    : Menampilkan persentase daya baterai saat ini
+* piobat.ps1 threshold 80: Mengatur charging threshold pengisian (misal: 80%)
 
 [ CARA PENGGUNAAN ]
 1. Buka PowerShell / Terminal di folder ini.
