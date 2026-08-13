@@ -1,4 +1,4 @@
-PIOBATWIN v1.0 (Windows CLI)
+PIOBAT v1.0 (Windows CLI)
 Battery Detection & Management Tool for Windows
 ============================
 [ OVERVIEW ]
