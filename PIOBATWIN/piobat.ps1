@@ -1,6 +1,6 @@
 # ================================================================
-#                    PIO BAT v1.0 (Windows CLI)                  
-#        Battery Detection & Management Tool for Windows         
+#                     PIOBATWIN 1.0 by Cyberly Dev
+#        Battery Detection & Management Tool for Windows
 # ================================================================
 
 param (
@@ -19,7 +19,9 @@ function Get-Admin {
 $batWmi = Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue
 
 if (-not $batWmi) {
-    Write-Error "This program is not compatible with your system (No battery device detected)."
+    Write-Host "This program is not compatible with your system (No battery device detected)." -ForegroundColor Red
+    Write-Host "Tekan Enter untuk keluar..."
+    Read-Host
     exit 1
 }
 
@@ -35,7 +37,6 @@ function Get-BatteryVendor {
 
 # Accurate Battery Health Calculation
 function Get-BatteryHealth {
-    # Method 1: WMI Static Data
     $staticData = Get-CimInstance -Namespace root\wmi -ClassName MSDevices_BatteryStaticData -ErrorAction SilentlyContinue
     $fullCapData = Get-CimInstance -Namespace root\wmi -ClassName MSDevices_BatteryFullChargedCapacity -ErrorAction SilentlyContinue
 
@@ -47,7 +48,6 @@ function Get-BatteryHealth {
         return "$health% ($fullCap mWh / $designCap mWh)"
     }
     
-    # Method 2: Fallback via PowerCFG XML Report
     try {
         $xmlPath = "$env:TEMP\bat_report.xml"
         powercfg /batteryreport /xml /output $xmlPath | Out-Null
@@ -88,38 +88,25 @@ function Get-BatteryStatusText {
     return "Unknown ($StatusCode)"
 }
 
-# Mengatur Charging Threshold khusus ASUS / WMI Tweak
+# Mengatur Charging Threshold
 function Set-ChargingThreshold {
     param([int]$Limit)
     Get-Admin
     
-    # Path Registry ASUS Optimization / Control Center
     $asusPath = "HKLM:\SOFTWARE\ASUS\ASUS System Control Interface\AsusOptimization\AC"
     
     if (Test-Path $asusPath) {
         Set-ItemProperty -Path $asusPath -Name "ChargingMode" -Value $Limit -ErrorAction SilentlyContinue
         Write-Host "[✓] ASUS Charging Threshold set to $Limit% via Registry." -ForegroundColor Green
     } else {
-        # Fallback Tweak Registry Universal OEM
         New-Item -Path "HKLM:\SOFTWARE\PIOAutomation" -Force | Out-Null
         Set-ItemProperty -Path "HKLM:\SOFTWARE\PIOAutomation" -Name "ChargeLimit" -Value $Limit -ErrorAction SilentlyContinue
         Write-Host "[✓] Charging threshold configured to $Limit%." -ForegroundColor Green
     }
 }
 
+# Eksekusi Logika Utama
 switch ($Command.ToLower()) {
-    "all" {
-        Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host "     PIO BAT v1.0 - FEATURE DETECTION     " -ForegroundColor Green
-        Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host "[+] Device Vendor      : $(Get-BatteryVendor)"
-        Write-Host "[+] Model Name         : $($batWmi.Name)"
-        Write-Host "[+] Current Level      : $($batWmi.EstimatedChargeRemaining)%"
-        Write-Host "[+] Charging Status    : $(Get-BatteryStatusText -StatusCode $batWmi.BatteryStatus)"
-        Write-Host "[+] Battery Health     : $(Get-BatteryHealth)"
-        Write-Host "=========================================="
-    }
-
     "capacity" {
         Write-Host "$($batWmi.EstimatedChargeRemaining)%"
     }
@@ -133,7 +120,7 @@ switch ($Command.ToLower()) {
     }
 
     "info" {
-        Write-Host "=== PIO BAT v1.0 Info ===" -ForegroundColor Green
+        Write-Host "=== PIOBATWIN 1.0 by Cyberly Dev Info ===" -ForegroundColor Green
         Write-Host "Vendor          : $(Get-BatteryVendor)"
         Write-Host "Model           : $($batWmi.Name)"
         Write-Host "Status          : $(Get-BatteryStatusText -StatusCode $batWmi.BatteryStatus) ($($batWmi.EstimatedChargeRemaining)%)"
@@ -144,11 +131,24 @@ switch ($Command.ToLower()) {
         if ($Value) {
             Set-ChargingThreshold -Limit ([int]$Value)
         } else {
-            Write-Host "Usage: .\piobat.ps1 -Command threshold -Value <1-100>"
+            Write-Host "Usage: .\piobat.exe threshold <1-100>"
         }
     }
 
     default {
-        Write-Host "Commands: all, capacity, status, health, info, threshold"
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "       PIOBATWIN 1.0 by Cyberly Dev       " -ForegroundColor Green
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "[+] Device Vendor      : $(Get-BatteryVendor)"
+        Write-Host "[+] Model Name         : $($batWmi.Name)"
+        Write-Host "[+] Current Level      : $($batWmi.EstimatedChargeRemaining)%"
+        Write-Host "[+] Charging Status    : $(Get-BatteryStatusText -StatusCode $batWmi.BatteryStatus)"
+        Write-Host "[+] Battery Health     : $(Get-BatteryHealth)"
+        Write-Host "==========================================" -ForegroundColor Cyan
     }
 }
+
+Write-Host ""
+Write-Host "Tekan Enter untuk keluar..." -ForegroundColor Yellow
+Read-Host
