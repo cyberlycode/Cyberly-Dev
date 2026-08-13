@@ -1,6 +1,6 @@
 # ================================================================
-#                     PIOBATWIN 1.0 by Cyberly Dev
-#        Battery Detection & Management Tool for Windows
+#                PIOBATWIN 1.0 (Universal) by Cyberly Dev
+#     Supports: Windows Vista / 7 / 8 / 8.1 / 10 / 11 (32 & 64 bit)
 # ================================================================
 
 param (
@@ -9,64 +9,68 @@ param (
 )
 
 function Get-Admin {
-    if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         Start-Process powershell.exe -ArgumentList ("-NoProfile -ExecutionPolicy Bypass -File `"{0}`" -Command `"{1}`" -Value `"{2}`"" -f $MyInvocation.MyCommand.Definition, $Command, $Value) -Verb RunAs
         exit
     }
 }
 
-# Mengambil data baterai via WMI / CIM
-$batWmi = Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue
+# 1. Mengambil data baterai via Get-WmiObject (Kompatibel dari Windows Vista - Win 11)
+$batWmi = Get-WmiObject -Class Win32_Battery -ErrorAction SilentlyContinue
 
 if (-not $batWmi) {
     Write-Host "This program is not compatible with your system (No battery device detected)." -ForegroundColor Red
-    Write-Host "Tekan Enter untuk keluar..."
+    Write-Host "Tekan Enter untuk keluar..." -ForegroundColor Yellow
     Read-Host
     exit 1
 }
 
-# Ambil Vendor dengan Fallback ke System Manufacturer jika WMI Battery kosong
+# 2. Ambil Vendor (Universal)
 function Get-BatteryVendor {
     if ($batWmi.Manufacturer -and $batWmi.Manufacturer.Trim() -ne "") {
-        return $batWmi.Manufacturer
+        return $batWmi.Manufacturer.Trim()
     }
-    $sysVendor = (Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue).Manufacturer
-    if ($sysVendor) { return $sysVendor }
-    return "ASUSTeK COMPUTER INC."
+    $sysVendor = (Get-WmiObject -Class Win32_ComputerSystem -ErrorAction SilentlyContinue).Manufacturer
+    if ($sysVendor) { return $sysVendor.Trim() }
+    return "Generic / OEM Laptop"
 }
 
-# Accurate Battery Health Calculation
+# 3. Accurate Battery Health Calculation (Multi-Fallback)
 function Get-BatteryHealth {
-    $staticData = Get-CimInstance -Namespace root\wmi -ClassName MSDevices_BatteryStaticData -ErrorAction SilentlyContinue
-    $fullCapData = Get-CimInstance -Namespace root\wmi -ClassName MSDevices_BatteryFullChargedCapacity -ErrorAction SilentlyContinue
+    # Metode A: WMI Static & FullCharge Data (Bisa di Win Vista, 7, 8, 10, 11)
+    try {
+        $design = (Get-WmiObject -Namespace root\wmi -Class MSDevices_BatteryStaticData -ErrorAction SilentlyContinue).DesignedCapacity
+        $full = (Get-WmiObject -Namespace root\wmi -Class MSDevices_BatteryFullChargedCapacity -ErrorAction SilentlyContinue).FullChargedCapacity
 
-    $designCap = $staticData.DesignedCapacity
-    $fullCap   = $fullCapData.FullChargedCapacity
+        if ($design -and $full -and $design -gt 0) {
+            $healthPct = [math]::Round(($full / $design) * 100)
+            return "$healthPct% ($full mWh / $design mWh)"
+        }
+    } catch {}
 
-    if ($designCap -and $fullCap -and $designCap -gt 0) {
-        $health = [math]::Round(($fullCap / $designCap) * 100)
-        return "$health% ($fullCap mWh / $designCap mWh)"
-    }
-    
+    # Metode B: PowerCFG XML Report (Khusus Win 8, 10, 11)
     try {
         $xmlPath = "$env:TEMP\bat_report.xml"
         powercfg /batteryreport /xml /output $xmlPath | Out-Null
         if (Test-Path $xmlPath) {
             [xml]$xml = Get-Content $xmlPath
-            $design = [double]$xml.BatteryReport.Batteries.Battery.DesignCapacity
-            $full = [double]$xml.BatteryReport.Batteries.Battery.FullChargeCapacity
+            $designCap = [double]$xml.BatteryReport.Batteries.Battery.DesignCapacity
+            $fullCap = [double]$xml.BatteryReport.Batteries.Battery.FullChargeCapacity
             Remove-Item $xmlPath -Force -ErrorAction SilentlyContinue
-            if ($design -gt 0) {
-                $healthPct = [math]::Round(($full / $design) * 100)
-                return "$healthPct% ($full mWh / $design mWh)"
+            if ($designCap -gt 0) {
+                $healthPct = [math]::Round(($fullCap / $designCap) * 100)
+                return "$healthPct% ($fullCap mWh / $designCap mWh)"
             }
         }
     } catch {}
 
-    return "N/A (Driver Restriction)"
+    # Metode C: Standar Fallback untuk Windows Vista / 7 tanpa WMI ACPI driver
+    return "N/A (Legacy OS / Driver Limit)"
 }
 
-# Mapping Status Baterai
+# 4. Status Baterai
 function Get-BatteryStatusText {
     param([int]$StatusCode)
     $statusMap = @{
@@ -88,13 +92,12 @@ function Get-BatteryStatusText {
     return "Unknown ($StatusCode)"
 }
 
-# Mengatur Charging Threshold
+# 5. Charging Threshold
 function Set-ChargingThreshold {
     param([int]$Limit)
     Get-Admin
     
     $asusPath = "HKLM:\SOFTWARE\ASUS\ASUS System Control Interface\AsusOptimization\AC"
-    
     if (Test-Path $asusPath) {
         Set-ItemProperty -Path $asusPath -Name "ChargingMode" -Value $Limit -ErrorAction SilentlyContinue
         Write-Host "[✓] ASUS Charging Threshold set to $Limit% via Registry." -ForegroundColor Green
@@ -105,7 +108,7 @@ function Set-ChargingThreshold {
     }
 }
 
-# Eksekusi Logika Utama
+# 6. Eksekusi Perintah
 switch ($Command.ToLower()) {
     "capacity" {
         Write-Host "$($batWmi.EstimatedChargeRemaining)%"
@@ -120,7 +123,7 @@ switch ($Command.ToLower()) {
     }
 
     "info" {
-        Write-Host "=== PIOBATWIN 1.0 by Cyberly Dev Info ===" -ForegroundColor Green
+        Write-Host "=== PIOBATWIN 1.0 (Universal) Info ===" -ForegroundColor Green
         Write-Host "Vendor          : $(Get-BatteryVendor)"
         Write-Host "Model           : $($batWmi.Name)"
         Write-Host "Status          : $(Get-BatteryStatusText -StatusCode $batWmi.BatteryStatus) ($($batWmi.EstimatedChargeRemaining)%)"
