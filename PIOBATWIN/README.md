@@ -7,7 +7,7 @@ Utility ringan berbasis PowerShell untuk inspeksi kesehatan baterai, pemantauan 
 ## Author & Credits
 
 * **Developer**: Cyberly Dev
-* **Publisher**: GPComp
+* **Publisher**: Cyberly Code Dev
 * **Repository**: [Cyberly-Dev (branch: piobat)](https://github.com/cyberlycode/Cyberly-Dev/tree/piobat)
 * **Suite**: PIO Automation & Optimization Suite
 
