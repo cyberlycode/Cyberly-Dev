@@ -1,6 +1,6 @@
 ============================================================
-                   PIO BAT v1.0 (Windows CLI)                   
-        Battery Detection & Management Tool for Windows         
+PIO BAT v1.0 (Windows CLI)
+Battery Detection & Management Tool for Windows
 ============================================================
 
 [ OVERVIEW ]
