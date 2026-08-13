@@ -1,7 +1,7 @@
-================================================================
+============================================================
                    PIO BAT v1.0 (Windows CLI)                   
         Battery Detection & Management Tool for Windows         
-================================================================
+============================================================
 
 [ OVERVIEW ]
 PIO BAT adalah utility CLI berbasis PowerShell & Batch Runner untuk 
